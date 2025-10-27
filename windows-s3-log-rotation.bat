@@ -5,6 +5,8 @@
 ## once the upload has been done, the $MaxOldFilesToDelete kicks in to delete the specified number of oldest available files in the logs.
 ## thats it
 
+## I set a task scheduler to make sure the script gets executed once every month
+
 
 # ============================
 # === AWS Credentials
