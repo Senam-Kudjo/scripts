@@ -1,0 +1,23 @@
+1. vim secret_token.sh
+
+2.
+#!/bin/bash
+
+#start of secret_token.sh file
+kubectl delete secret etz-ecr -n main-etranzact-sandbox
+
+
+kubectl create secret docker-registry etz-ecr \
+  --namespace=main-etranzact-sandbox \
+  --docker-server=<insert ECR_ENDPOINT> \
+  --docker-username=AWS \
+  --docker-password=$(aws ecr get-login-password)
+
+#end of secret_token.sh file
+##save and quit file
+
+
+3. crontab -e
+
+# now insert this into your crontab editor
+* */8 * * * /path/to/secre_token_script
