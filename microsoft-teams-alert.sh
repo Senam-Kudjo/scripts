@@ -1,26 +1,141 @@
-## I wrote this script to be checking the row count for a particular table on our postgresql server
-## this script retrieves the row count then sends it us in our Teams group as an alert
-## the script was exectued through a cronjob that runs at 4am,12pm and 5pm every single day => 0 4,12,17 * * * /opt/script/falcon-db-checker/db-fetcher.sh
-## the whole purpose of this was to ensure we stopped manually checking the row count ourserlves
-
 #!/bin/bash
 
+#
+# Checks for server and db availability
+##################
+# Teams Workflow Webhook
+####################################################
+WEBHOOK_URL="http://xxxx"
+####################################################
+# Configuration
+####################################################
+SERVER_NAME="Falcon DB Server"
+SERVER_IP="x.x.x.x"
+DB_PORT="x.x.x.x"
+
+####################################################
+# Check Server Reachability
+####################################################
+if ping -c 2 -W 2 "$SERVER_IP" >/dev/null 2>&1; then
+    SERVER_STATUS="🟢 UP"
+else
+    SERVER_STATUS="🔴 DOWN"
+fi
+
+####################################################
+# Check Database Port
+####################################################
+if nc -z -w 3 "$SERVER_IP" "$DB_PORT" >/dev/null 2>&1; then
+    DB_STATUS="🟢 UP"
+else
+    DB_STATUS="🔴 DOWN"
+fi
+
+####################################################
+# Date
+####################################################
+CHECK_TIME=$(date '+%d %b %Y %H:%M:%S')
+
+####################################################
+# Build Adaptive Card
+####################################################
+PAYLOADCHECK=$(cat <<EOF
+{
+  "type": "message",
+  "attachments": [
+    {
+      "contentType": "application/vnd.microsoft.card.adaptive",
+      "content": {
+        "type": "AdaptiveCard",
+        "version": "1.5",
+        "body": [
+          {
+            "type": "TextBlock",
+            "text": "Server Health Check",
+            "weight": "Bolder",
+            "size": "Large"
+          },
+          {
+            "type": "FactSet",
+            "facts": [
+              {
+                "title": "Server",
+                "value": "${SERVER_NAME}"
+              },
+              {
+                "title": "IP Address",
+                "value": "${SERVER_IP}"
+              },
+              {
+                "title": "Server Status",
+                "value": "${SERVER_STATUS}"
+              },
+              {
+                "title": "Database Port",
+                "value": "${DB_PORT}"
+              },
+              {
+                "title": "Database Status",
+                "value": "${DB_STATUS}"
+              },
+              {
+                "title": "Checked At",
+                "value": "${CHECK_TIME}"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+EOF
+)
+
+####################################################
+# Send to Teams
+####################################################
+HTTP_CODE=$(curl \
+    --silent \
+    --output /dev/null \
+    --write-out "%{http_code}" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOADCHECK" \
+    "$WEBHOOK_URL")
+
+if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "202" ]; then
+    echo "Teams notification sent successfully."
+else
+    echo "Failed to send Teams notification. HTTP Status: $HTTP_CODE"
+fi
+
+if [ "$SERVER_STATUS" = "🔴 DOWN" ] || [ "$DB_STATUS" = "🔴 DOWN" ]; then
+      echo "Health check failed. Exiting..."
+      exit 1
+fi
+
+###############################
+# END OF CHECKS
+################################
+
+
+####START OF DB ROW COUNT
 ####################################################
 # PostgreSQL Configuration
 ####################################################
 DB_HOST="x.x.x.x"
 DB_PORT="xxxx"
-DB_NAME="xxxxx"
-DB_USER="xxxxx"
-DB_PASSWORD="xxxxx"
+DB_NAME="xxxx"
+DB_USER="xxxx"
+DB_PASSWORD="xxxxxx"
 
-TABLE_NAME="xxxx"
+TABLE_NAME="xxxxxxxx"
 
 ####################################################
 # Teams Workflow Webhook
 ####################################################
-#insert your microsoft teams generated webhook url in the WEBHOOK_URL value
-WEBHOOK_URL="xxx"
+# WEBHOOK_URL="xxxx"
 ####################################################
 # Export Password
 ####################################################
