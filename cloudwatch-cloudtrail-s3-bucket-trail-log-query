@@ -1,0 +1,5 @@
+SOURCE logGroups(namePrefix: [], class: "STANDARD") START=-3600s END=0s |
+fields @timestamp, eventName, requestParameters.<bucket_name>, sourceIPAddress, userIdentity.arn 
+    | filter eventSource = "s3.amazonaws.com"
+    | sort @timestamp desc
+    | limit 20
